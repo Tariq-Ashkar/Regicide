@@ -42,52 +42,53 @@ def sortHand(hand):
         sorting_dict[suit]=sorted(sorting_dict[suit], key= lambda c: c.rank)
     
     return sorting_dict["S"]+sorting_dict["C"]+sorting_dict["D"]+sorting_dict["H"]
-
 def checkCombo(played, hand, base_atk):
-    combo_flag=False
-    combocards=[]
-    if len(played)==1:
+    if len(played) == 1:
         if played[0].rank == 1:
-                combocards=hand
-                combo_flag=True
-        else: 
-            for c in range(0,len(hand)):
-                if (hand[c].rank==played[0].rank and hand[c].rank<6)  or hand[c].rank==1:
-                    combocards.append(hand[c])
-                    combo_flag=True
-                else:
-                    combocards.append("X")
-        return (combo_flag, combocards)
-    if len(played)==2:
-        if(played[0].rank==1 or played[0].rank==1):
-            combo_flag=False 
-            return (combo_flag, combocards)
+            return True, hand.copy()
+        combocards = [
+            card_in_hand if (card_in_hand.rank == played[0].rank and card_in_hand.rank < 6) or card_in_hand.rank == 1 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
 
-        
-        for c in range(0,len(hand)):
-            if hand[c].rank==played[0].rank and base_atk+hand[c].rank<=10:
-                combocards.append(hand[c])
-                combo_flag=True
+    if len(played) == 2:
+        if played[0].rank == 1:
+            return False, []
+        combocards = [
+            card_in_hand if card_in_hand.rank == played[0].rank and base_atk + card_in_hand.rank <= 10 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
 
-            else:
-                combocards.append("X")
-        return (combo_flag, combocards)   
-    if len(played)==3:
-        if(played[0].rank != 2):
-            combo_flag=False 
-            return (combo_flag, combocards)   
-        for c in range(0,len(hand)):
-            if hand[c].rank==played[0].rank and base_atk+hand[c].rank<=10:
-                combocards.append(hand[c])
-                combo_flag=True
+    if len(played) == 3:
+        if played[0].rank != 2:
+            return False, []
+        combocards = [
+            card_in_hand if card_in_hand.rank == played[0].rank and base_atk + card_in_hand.rank <= 10 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
 
-            else:
-                combocards.append("X")
-        return (combo_flag, combocards)   
+    return False, []
 
-    return (False, combocards)
+def play_jester(hand, deck, discard, jesters):
+    if jesters > 0:
+        discard += hand
+        hand.clear()
+        for _ in range(8):
+            if deck:
+                hand.append(deck.pop())
+        jesters -= 1
+        print("Jester Played!")
+    else:
+        print("No more jesters left!")
+    return hand, deck, discard, jesters
+
 deck=[]
-
 
 for suit in SUITS:
     for r in range(1,11):
@@ -100,7 +101,10 @@ for s in range(20,5,-5):
         castle.append(enemy(suit,s))
 random.shuffle(deck)
 
-hand=deck[:8]
+hand=[]
+for _  in range (8):
+    hand.append(deck.pop())
+
 hand=sortHand(hand)
 
 random.shuffle(castle[:4])
@@ -114,25 +118,40 @@ played=[]
 discard=[]
 base_atk=0
 game_lost=False
+jesters=2
 # Main Gameplay loop
 while game_lost==False:
     enemy_isAlive=True
 
     print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
           "Hand: "+str(hand)+str(len(hand))+"\n"+
+          "Jesters: "+str(jesters)+"\n"+
           "Deck: "+str(len(deck))+"/51"+"\n"+
           "Discard: "+str(len(discard))+" cards"+"\n"+
           "Played Cards: "+str(played)+"\n"+
           "Base Attack: "+str(base_atk)+"\n"+"\n")
     
-    # STEP 1: play card from hand
+    # STEP 1: play card from hand *Jesters can be played*
 
-    #This is the line that moves a card from hand into played
-    played.append(hand.pop(int(input("What would you like to play? Please enter the card number: "))-1))# Error wrap this
+    card_input=input("What would you like to play? Please enter the card number: ")# Error wrap this
+
+    while card_input == "J":
+        hand, deck, discard, jesters = play_jester(hand, deck, discard, jesters)
+        print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
+            "Hand: "+str(hand)+str(len(hand))+"\n"+
+            "Jesters: "+str(jesters)+"\n"+
+            "Deck: "+str(len(deck))+"/51"+"\n"+
+            "Discard: "+str(len(discard))+" cards"+"\n"+
+            "Played Cards: "+str(played)+"\n"+
+            "Base Attack: "+str(base_atk)+"\n"+"\n")
+        card_input=input("What would you like to play? Please enter the card number: ")
+    played.append(hand.pop(int(card_input)-1))
+
     base_atk=played[0].rank
 
     print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
           "Hand: "+str(hand)+str(len(hand))+"\n"+
+          "Jesters: "+str(jesters)+"\n"+
           "Deck: "+str(len(deck))+"/51"+"\n"+
           "Discard: "+str(len(discard))+" cards"+"\n"+
           "Played Cards: "+str(played)+"\n"+
@@ -148,6 +167,7 @@ while game_lost==False:
         if input("Would you like to combo? Y/N: ") == "Y":
                 print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
                 "Hand: "+str(checkCombo(played, hand, base_atk)[1])+str(len(hand))+"\n"+
+                "Jesters: "+str(jesters)+"\n"+
                 "Deck: "+str(len(deck))+"/51"+"\n"+
                 "Discard: "+str(len(discard))+" cards"+"\n"+
                 "Played Cards: "+str(played)+"\n"+
@@ -204,11 +224,13 @@ while game_lost==False:
     played.clear()
     base_atk=0
 
-    if enemy_isAlive:# STEP 4 suffer damage. Skipped if we just killed the enemy. 
+    if enemy_isAlive:# STEP 4 suffer damage. Skipped if we just killed the enemy. *Jesters can be played*
+        
         incoming_damage=current_enemy.atk
 
         print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
                         "Hand: "+str(hand)+str(len(hand))+"\n"+
+                        "Jesters: "+str(jesters)+"\n"+
                         "Deck: "+str(len(deck))+"/51"+"\n"+
                         "Discard: "+str(len(discard))+" cards"+"\n"+
                         "Played Cards: "+str(played)+"\n"+
@@ -220,29 +242,46 @@ while game_lost==False:
                 break
             print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
                         "Hand: "+str(hand)+str(len(hand))+"\n"+
+                        "Jesters: "+str(jesters)+"\n"+
                         "Deck: "+str(len(deck))+"/51"+"\n"+
                         "Discard: "+str(len(discard))+" cards"+"\n"+
                         "Played Cards: "+str(played)+"\n"+
                         "Base Attack: "+str(base_atk)+"\n"+"\n")
-            played.append(hand.pop(int(input("Discard a card to defend! Defense remaining: "+str(incoming_damage)+"   "))-1))# Error wrap this
+            card_input=input("Discard a card to defend! Defense remaining: "+str(incoming_damage)+"   ")# Error wrap this
+
+            while card_input == "J":
+                hand, deck, discard, jesters = play_jester(hand, deck, discard, jesters)
+                print("Current enemy: "+ str(current_enemy)+"    "+str(current_enemy.hp)+"HP"+"||"+str(current_enemy.atk)+"ATK"+"\n"+
+                    "Hand: "+str(hand)+str(len(hand))+"\n"+
+                    "Jesters: "+str(jesters)+"\n"+
+                    "Deck: "+str(len(deck))+"/51"+"\n"+
+                    "Discard: "+str(len(discard))+" cards"+"\n"+
+                    "Played Cards: "+str(played)+"\n"+
+                    "Base Attack: "+str(base_atk)+"\n"+"\n")
+                if len(hand)==0:
+                    game_lost=True
+                    break
+                card_input=input("Discard a card to defend! Defense remaining: "+str(incoming_damage)+"   ")
+            if game_lost:
+                break
+            played.append(hand.pop(int(card_input)-1))
             incoming_damage=incoming_damage-played[len(played)-1].rank
-        played.clear()
+    discard=discard+played
+    played.clear()
 
 #TODO:
-#Test enemy behaviour in hand
-#Handle game losses/defeats
-#
+# Test enemy behaviour in hand
+# Handle game losses/defeats
 
 
 
 
 
-        
-        
 
 
 
 
 
-            
-    
+
+
+
