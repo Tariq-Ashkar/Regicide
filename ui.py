@@ -11,11 +11,6 @@ root.config(bg="grey")
 FRAME_WIDTH = 1400
 FRAME_HEIGHT = 1000
 
-game_screen = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
-game_screen.pack(fill="both", expand=True)
-canvas = tk.Canvas(game_screen, width=FRAME_WIDTH, height=FRAME_HEIGHT, bg="grey")
-canvas.pack()
-
 
 
 def image_resize(file, width, height):
@@ -344,30 +339,120 @@ def show_frame(frame):
     '''
     frame.tkraise()
 
+main_menu = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+pause_menu = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+win_menu = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+lose_menu = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+
+game_screen = tk.Frame(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+
+for frame in (main_menu, game_screen, lose_menu, win_menu, pause_menu,):
+    frame.place(x=0, y=0, relwidth=1, relheight=1)
+
+
+
+menu_canvas = tk.Canvas(main_menu,
+                        width=FRAME_WIDTH,
+                        height=FRAME_HEIGHT,
+                        bg="grey")
+menu_canvas.pack()
+bg_image = image_resize("board.png", FRAME_WIDTH, FRAME_HEIGHT)
+menu_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+
+start_btn = tk.Button(main_menu,
+                      text="Start Game",
+                      font=("Arial", 14, "bold"),
+                      command=lambda: show_frame(game_screen))
+start_btn.place(x=600, y=300, height=75, width=200)
+
+exit_btn = tk.Button(main_menu,
+                     text="Exit",
+                     font=("Arial", 14, "bold"),
+                     command=root.quit)
+exit_btn.place(x=600, y=500, height=75, width=200)
+
+title_img = image_resize('Regicide.png', 400, 200)
+title=menu_canvas.create_image(500, 50, anchor="nw", image=title_img)
+
+
+
+pause_canvas = tk.Canvas(pause_menu,
+                       width=FRAME_WIDTH,
+                       height=FRAME_HEIGHT,
+                       bg="grey")
+pause_canvas.pack()
+
+pause_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+pause_img = image_resize('Pause.png', 400, 200)
+pause_title=pause_canvas.create_image(500, 50, anchor="nw", image=pause_img)
+
+back_to_menu_btn = tk.Button(pause_menu,
+                             text="Back to Main Menu",
+                             font=("Arial", 14),
+                             command=lambda: show_frame(main_menu))
+back_to_menu_btn.place(x=600, y=200, height=50, width=200)
+
+start_btn = tk.Button(pause_menu,
+                      text="play Game",
+                      font=("Arial", 14, "bold"),
+                      command=lambda: show_frame(game_screen))
+start_btn.place(x=600, y=300, height=75, width=200)
+
+
+
+win_canvas = tk.Canvas(win_menu,
+                       width=FRAME_WIDTH,
+                       height=FRAME_HEIGHT,
+                       bg="grey")
+win_canvas.pack()
+
+win_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+win_img = image_resize('win.png', 400, 200)
+win_title=win_canvas.create_image(500, 50, anchor="nw", image=win_img)
+
+lose_canvas = tk.Canvas(lose_menu,
+                       width=FRAME_WIDTH,
+                       height=FRAME_HEIGHT,
+                       bg="grey")
+lose_canvas.pack()
+
+lose_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+lose_img = image_resize('LOSE.png', 400, 200)
+lose_title=lose_canvas.create_image(500, 50, anchor="nw", image=lose_img)
+
+back_to_menu_btn = tk.Button(lose_menu,
+                             text="Back to Main Menu",
+                             font=("Arial", 14),
+                             command=lambda: show_frame(main_menu))
+back_to_menu_btn.place(x=600, y=200, height=50, width=200)
+
+
+
+game_canvas = tk.Canvas(game_screen, width=FRAME_WIDTH, height=FRAME_HEIGHT, bg="grey")
+game_canvas.pack()
+game_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+
+
 suits = ["diamonds", "hearts", "clubs", "spades"]
 ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "ace", "jack", "queen", "king"]
 
 super_cards=[]
 for suit in suits:
     for rank in ranks:
-        temp_card = card(canvas, rank, suit, 105, 144, -200, -200)  
+        temp_card = card(game_canvas, rank, suit, 105, 144, -200, -200)  
         super_cards.append(temp_card)
-
-
-
-
 
 cards = []
 played_cards = []
-tavern1=tavern(canvas, super_cards, 69, 695, 102, 144)
-enemy1=enemy(canvas, "king", 598, 90, "diamonds", 204, 288)
+tavern1=tavern(game_canvas, super_cards, 69, 695, 102, 144)
+enemy1=enemy(game_canvas, "king", 598, 90, "diamonds", 204, 288)
 enemy1.update_health_bar()
-hand1=hand(canvas, 220, 680, 965, 184)
+hand1=hand(game_canvas, 220, 680, 965, 184)
 hand1.fill_hand(tavern1)
 
-played_hand1 = played_hand(canvas, 452, 475, 500, 184)
+played_hand1 = played_hand(game_canvas, 452, 475, 500, 184)
 
-discard = discard_pile(canvas, 1300, 800, 105, 154)  # x,y is center
+discard = discard_pile(game_canvas, 1300, 800, 105, 154)  # x,y is center
 def discard_random(event=None):
     while played_hand1.cards:
         card_obj = played_hand1.cards.pop(0)   
@@ -375,18 +460,18 @@ def discard_random(event=None):
 
 
 
-discard_btn = tk.Button(root, text="discard", command=discard_random)
+discard_btn = tk.Button(game_screen, text="discard", command=discard_random)
 discard_btn.place(x=960, y=615)  
 
-clear_btn = tk.Button(root, text="clear hand", command=discard_random)
-clear_btn.place(x=960, y=575)  
+lose_btn = tk.Button(game_screen, text="lose", command=lambda: show_frame(lose_menu))
+lose_btn.place(x=960, y=575)  
 
-refill_btn = tk.Button(root, text="refill hand", command=discard_random)
-refill_btn.place(x=960, y=535)  
+pause_btn = tk.Button(game_screen, text="pause", command=lambda: show_frame(pause_menu))
+pause_btn.place(x=960, y=535)  
 
-play_hand_btn = tk.Button(root, text="play hand", command=discard_random)
-play_hand_btn.place(x=960, y=495)  
+win_btn = tk.Button(game_screen, text="win", command=lambda: show_frame(win_menu))
+win_btn.place(x=960, y=495)  
 
-
+show_frame(main_menu)
 # Run the Tkinter event loop
 root.mainloop()
