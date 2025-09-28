@@ -186,6 +186,7 @@ class card():
         self.x = x
         self.y = y
         self.border_id = None
+        self.raised = False 
 
 
         # store filepath so other systems (discard, save, etc.) can reopen it
@@ -213,30 +214,23 @@ class card():
         print(played_hand1.cards)
         combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
         print(combo_cards)
-        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
-        if combo_flag: 
-            for c in combo_cards: 
-                if c != "X": 
-                    c.highlight("green") 
-        else: 
-            c.unhighlight()
+        for c in hand1.cards:
+            if isinstance(c, card) and c.raised:
+                c.canvas.move(c.character_id, 0, +20)
+                if c.border_id:
+                    c.canvas.move(c.border_id, 0, +20)
+                c.raised = False
+
+        
+        if combo_flag:
+            for c in combo_cards:
+                if isinstance(c, card) and not c.raised:
+                    c.canvas.move(c.character_id, 0, -20)
+                    if c.border_id:
+                        c.canvas.move(c.border_id, 0, -20)
+                    c.raised = True
         base_atk=base_atk+self.rank
         print(f"Base Attack: {base_atk}")
-        
-    def highlight(self, color="red", thickness=3):
-        if self.border_id is None:
-            self.border_id = self.canvas.create_rectangle(
-                self.x, self.y,
-                self.x + self.width, self.y + self.height,
-                outline=color, width=thickness
-            )
-            self.canvas.tag_raise(self.character_id)  
-        else:
-            
-            self.canvas.itemconfig(self.border_id, outline=color, width=thickness)
-
-
-
 
     def set_x(self, new_x):
         self.x = new_x
