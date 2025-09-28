@@ -44,7 +44,7 @@ def checkCombo(played, hand, base_atk):
         return combo_flag, combocards
 
     if len(played) == 2:
-        if played[0].rank == 1:
+        if played[0].rank == 1 or played[1].rank==1:
             return False, []
         combocards = [
             card_in_hand if card_in_hand.rank == played[0].rank and base_atk + card_in_hand.rank <= 10 else "X"
