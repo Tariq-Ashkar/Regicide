@@ -185,6 +185,8 @@ class card():
         self.canvas = canvas
         self.x = x
         self.y = y
+        self.border_id = None
+
 
         # store filepath so other systems (discard, save, etc.) can reopen it
         self.filepath = f"{self.suit}/{self.rank} {self.suit}.png"
@@ -211,16 +213,30 @@ class card():
         print(played_hand1.cards)
         combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
         print(combo_cards)
-        if combo_flag:
-            for i in range(len(combo_cards)-1):
-                if combo_cards[i]!="X":
-                    print(i)
-                    hand1.highlight_card(i)
-                elif combo_cards[i]=="X":
-                    hand1.unhighlight_card(i)
+        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        if combo_flag: 
+            for c in combo_cards: 
+                if c != "X": 
+                    c.highlight("green") 
+        else: 
+            c.unhighlight()
         base_atk=base_atk+self.rank
         print(f"Base Attack: {base_atk}")
         
+    def highlight(self, color="red", thickness=3):
+        if self.border_id is None:
+            self.border_id = self.canvas.create_rectangle(
+                self.x, self.y,
+                self.x + self.width, self.y + self.height,
+                outline=color, width=thickness
+            )
+            self.canvas.tag_raise(self.character_id)  
+        else:
+            
+            self.canvas.itemconfig(self.border_id, outline=color, width=thickness)
+
+
+
 
     def set_x(self, new_x):
         self.x = new_x
@@ -309,29 +325,9 @@ class hand():
                                                     fill="brown",
                                                     stipple="gray50"
                                                     )
-    def highlight_card(self, card_place): 
-        """Draw a highlight rectangle for a slot"""
-        if card_place < 1 or card_place > 8:
-            return
-        if card_place in self.highlights:  # already highlighted
-            return
+    
 
-        x = 225 + (card_place)*120
-        y = 690
-        rect_id = self.canvas.create_rectangle(
-            x, y, x+self.slotwidth, y+self.slotheight,
-            fill="yellow"
-        )
-        self.highlights[card_place-1] = rect_id
-
-        if card_place <= len(self.cards):
-            self.canvas.tag_raise(self.cards[card_place-1].character_id)
-
-    def unhighlight_card(self, card_place):
-        """Remove highlight rectangle"""
-        rect_id = self.highlights.pop(card_place, None)
-        if rect_id:
-            self.canvas.delete(rect_id)
+    
         
     
     def fill_hand(self, tavern, num_cards=8):
@@ -621,7 +617,7 @@ pause_btn.place(x=960, y=535)
 win_btn = tk.Button(game_screen, text="win", command=lambda: show_frame(win_menu))
 win_btn.place(x=960, y=495)  
 
-root.bind("<KeyPress-1>", lambda e: hand1.highlight_card(1))
+
 root.bind("<KeyRelease-1>", lambda e: hand1.unhighlight_card(1))
 
 root.bind("<KeyPress-2>", lambda e: hand1.highlight_card(2))
