@@ -23,6 +23,9 @@ def image_resize(file, width, height):
     new_image = og_image.resize((width, height), Image.NEAREST)
     return ImageTk.PhotoImage(new_image)
 
+
+
+
 class enemy():
     def __init__(self, canvas, rank, x, y, suit, width, height):
         self.width = width
@@ -73,6 +76,7 @@ class enemy():
             self.canvas.itemconfig(self.health_bar, fill="yellow")
         else:
             self.canvas.itemconfig(self.health_bar, fill="red")
+
 
 
 class tavern():
@@ -159,6 +163,8 @@ class card():
         return self.y
 
         
+
+
 class played_hand():
     def __init__(self, canvas, x, y, width, height):
         self.width = width
@@ -203,6 +209,10 @@ class played_hand():
     def clear(self):
         self.cards=[]
         
+
+
+
+
 class hand():
     def __init__(self, canvas, x, y, width, height):
         self.width = width
@@ -211,68 +221,42 @@ class hand():
         self.canvas = canvas
         self.x = x
         self.y = y
-        slotwidth=115
-        slotheight=154
-
-        self.hand_bg = canvas.create_rectangle(x,
-                                                y,
-                                                x+width,
-                                                y+height,
-                                                fill="brown",
-                                                stipple="gray50"
-                                                )
-        
-        self.hand_slot1 = canvas.create_rectangle(225,
-                                                690,
-                                                225+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                
-                                                )
-        self.hand_slot2 = canvas.create_rectangle(345,
-                                                690,
-                                                345+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot3 = canvas.create_rectangle(465,
-                                                690,
-                                                465+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot4 = canvas.create_rectangle(585,
-                                                690,
-                                                585+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot5 = canvas.create_rectangle(705,
-                                                690,
-                                                705+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot6 = canvas.create_rectangle(825,
-                                                690,
-                                                825+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot7 = canvas.create_rectangle(945,
-                                                690,
-                                                945+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
-        self.hand_slot8 = canvas.create_rectangle(1065,
-                                                690,
-                                                1065+slotwidth,
-                                                690+slotheight,
-                                                fill="blue",
-                                                )
+        self.slotwidth=115
+        self.slotheight=154
         self.card_positions=[230,350,470,590,710,830,950,1070]
         self.cards=[]
+        self.highlights = {}
+        self.hand_bg = self.canvas.create_rectangle(self.x,
+                                                    self.y,
+                                                    self.x+self.width,
+                                                    self.y+self.height,
+                                                    fill="brown",
+                                                    stipple="gray50"
+                                                    )
+    def highlight_card(self, card_place): 
+        """Draw a highlight rectangle for a slot"""
+        if card_place < 1 or card_place > 8:
+            return
+        if card_place in self.highlights:  # already highlighted
+            return
+
+        x = 225 + (card_place-1)*120
+        y = 690
+        rect_id = self.canvas.create_rectangle(
+            x, y, x+self.slotwidth, y+self.slotheight,
+            fill="yellow"
+        )
+        self.highlights[card_place] = rect_id
+
+        if card_place <= len(self.cards):
+            self.canvas.tag_raise(self.cards[card_place-1].character_id)
+
+    def unhighlight_card(self, card_place):
+        """Remove highlight rectangle"""
+        rect_id = self.highlights.pop(card_place, None)
+        if rect_id:
+            self.canvas.delete(rect_id)
+        
     
     def fill_hand(self, tavern, num_cards=8):
         """Draw cards from the tavern to fill up the hand slots"""
@@ -289,6 +273,50 @@ class hand():
 
             self.cards.append(card_obj)
 
+class JokerWidget():
+    def __init__(self, canvas, x, y, width, height):
+        self.width = width
+        self.height = height
+        
+        self.canvas = canvas
+        self.x = x
+        self.y = y
+
+        self.hand_bg = canvas.create_rectangle(x,
+                                                y,
+                                                x+width,
+                                                y+height,
+                                                fill="red",
+                                                stipple="gray50"
+                                                )
+        self.joker_widg_slots=[1165, 1275]
+    def fill_jokers(self):
+        for slot in self.joker_widg_slots:
+            joker1=Joker(game_canvas, 100, 144, slot, 25)
+
+
+        
+class Joker():
+    def __init__(self, canvas, width, height, x, y):
+        self.width = width
+        self.height = height
+        self.canvas = canvas
+        self.x = x
+        self.y = y
+
+        self.image = image_resize('joker (larry).png', self.width, self.height)
+
+        # draw sprite
+        self.character_id = canvas.create_image(
+            self.x,
+            self.y,
+            image=self.image,
+            anchor="nw"
+        )
+        canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
+
+    def on_click(self, event):
+        print(f"You clicked {self.rank} of {self.suit}")
 
 class discard_pile:
     def __init__(self, canvas, x, y, width, height):
@@ -329,6 +357,7 @@ class discard_pile:
 
         # Update counter
         self.label.config(text=f"Discarded: {len(self.cards)}")
+
 
 
 def show_frame(frame):
@@ -410,6 +439,14 @@ win_canvas.create_image(0, 0, anchor="nw", image=bg_image)
 win_img = image_resize('win.png', 400, 200)
 win_title=win_canvas.create_image(500, 50, anchor="nw", image=win_img)
 
+back_to_menu_btn = tk.Button(win_menu,
+                             text="Back to Main Menu",
+                             font=("Arial", 14),
+                             command=lambda: show_frame(main_menu))
+back_to_menu_btn.place(x=600, y=200, height=50, width=200)
+
+
+
 lose_canvas = tk.Canvas(lose_menu,
                        width=FRAME_WIDTH,
                        height=FRAME_HEIGHT,
@@ -447,8 +484,10 @@ played_cards = []
 tavern1=tavern(game_canvas, super_cards, 69, 695, 102, 144)
 enemy1=enemy(game_canvas, "king", 598, 90, "diamonds", 204, 288)
 enemy1.update_health_bar()
-hand1=hand(game_canvas, 220, 680, 965, 184)
+hand1=hand(game_canvas, 220, 680, 965, 178)
 hand1.fill_hand(tavern1)
+jokerwid=JokerWidget(game_canvas, 1160, 20, 220, 154)
+jokerwid.fill_jokers()
 
 played_hand1 = played_hand(game_canvas, 452, 475, 500, 184)
 
@@ -459,6 +498,8 @@ def discard_random(event=None):
         discard.add_card(card_obj)
 
 
+clear_btn = tk.Button(game_screen, text="clear", command=discard_random)
+clear_btn.place(x=960, y=615)  
 
 discard_btn = tk.Button(game_screen, text="discard", command=discard_random)
 discard_btn.place(x=960, y=615)  
@@ -471,6 +512,33 @@ pause_btn.place(x=960, y=535)
 
 win_btn = tk.Button(game_screen, text="win", command=lambda: show_frame(win_menu))
 win_btn.place(x=960, y=495)  
+
+root.bind("<KeyPress-1>", lambda e: hand1.highlight_card(1))
+root.bind("<KeyRelease-1>", lambda e: hand1.unhighlight_card(1))
+
+root.bind("<KeyPress-2>", lambda e: hand1.highlight_card(2))
+root.bind("<KeyRelease-2>", lambda e: hand1.unhighlight_card(2))
+
+root.bind("<KeyPress-3>", lambda e: hand1.highlight_card(3))
+root.bind("<KeyRelease-3>", lambda e: hand1.unhighlight_card(3))
+
+root.bind("<KeyPress-4>", lambda e: hand1.highlight_card(4))
+root.bind("<KeyRelease-4>", lambda e: hand1.unhighlight_card(4))
+
+root.bind("<KeyPress-5>", lambda e: hand1.highlight_card(5))
+root.bind("<KeyRelease-5>", lambda e: hand1.unhighlight_card(5))
+
+root.bind("<KeyPress-6>", lambda e: hand1.highlight_card(6))
+root.bind("<KeyRelease-6>", lambda e: hand1.unhighlight_card(6))
+
+root.bind("<KeyPress-7>", lambda e: hand1.highlight_card(7))
+root.bind("<KeyRelease-7>", lambda e: hand1.unhighlight_card(7))
+
+root.bind("<KeyPress-8>", lambda e: hand1.highlight_card(8))
+root.bind("<KeyRelease-8>", lambda e: hand1.unhighlight_card(8))
+
+
+
 
 show_frame(main_menu)
 # Run the Tkinter event loop
