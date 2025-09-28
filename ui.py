@@ -1,6 +1,12 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import random
+S='spades'
+C='clubs'
+D='diamonds'
+H='hearts'
+SUITS=[S,C,D,H]
+base_atk=0
 
 # creating the initial window
 root = tk.Tk()
@@ -12,7 +18,56 @@ FRAME_WIDTH = 1400
 FRAME_HEIGHT = 1000
 
 
+def sortHand(hand):
+    sorting_dict={S:[],
+                  C:[],
+                  D:[],
+                  H:[]
+    }
 
+    for card in hand:
+        sorting_dict[card.suit].append(card)
+    for suit in sorting_dict:
+        sorting_dict[suit]=sorted(sorting_dict[suit], key= lambda c: c.rank)
+    
+    return sorting_dict[S]+sorting_dict[C]+sorting_dict[D]+sorting_dict[H]
+def checkCombo(played, hand, base_atk):
+    if len(played) == 1:
+        print("here")
+        if played[0].rank == 1:
+            return True, hand
+        combocards = [
+            card_in_hand if (card_in_hand.rank == played[0].rank and card_in_hand.rank < 6) or card_in_hand.rank == 1 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
+
+    if len(played) == 2:
+        if played[0].rank == 1:
+            return False, []
+        combocards = [
+            card_in_hand if card_in_hand.rank == played[0].rank and base_atk + card_in_hand.rank <= 10 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
+
+    if len(played) == 3:
+        if played[0].rank != 2:
+            return False, []
+        combocards = [
+            card_in_hand if card_in_hand.rank == played[0].rank and base_atk + card_in_hand.rank <= 10 else "X"
+            for card_in_hand in hand
+        ]
+        combo_flag = any(card != "X" for card in combocards)
+        return combo_flag, combocards
+
+    return False, []
+def reveal_enemy(canvas, castle):
+    next_enemy=castle.pop()
+    canvas.move(next_enemy.character_id, 598+400, 90+400)
+    return next_enemy
 def image_resize(file, width, height):
     '''
     resizes an image to fit the frame
@@ -41,7 +96,7 @@ class enemy():
 
 
         
-        file_path = f"{self.suit}/{self.rank} {self.suit}.png"
+        file_path = f"enemies/{self.suit}/{self.rank} {self.suit}.png"
 
         
         self.image = image_resize(file_path, self.width, self.height)
@@ -147,8 +202,25 @@ class card():
         canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
 
     def on_click(self, event):
-        print(f"You clicked {self.rank} of {self.suit}")
+        global base_atk
+        global played_hand1
+        global hand1
+        hand1.cards.remove(self)
         played_hand1.add_card(self)
+        print(hand1.cards)
+        print(played_hand1.cards)
+        combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        print(combo_cards)
+        if combo_flag:
+            for i in range(len(combo_cards)-1):
+                if combo_cards[i]!="X":
+                    print(i)
+                    hand1.highlight_card(i)
+                elif combo_cards[i]=="X":
+                    hand1.unhighlight_card(i)
+        base_atk=base_atk+self.rank
+        print(f"Base Attack: {base_atk}")
+        
 
     def set_x(self, new_x):
         self.x = new_x
@@ -161,6 +233,10 @@ class card():
 
     def get_y(self):
         return self.y
+
+    def __repr__(self):
+        return str(self.rank)+self.suit
+
 
         
 
@@ -240,13 +316,13 @@ class hand():
         if card_place in self.highlights:  # already highlighted
             return
 
-        x = 225 + (card_place-1)*120
+        x = 225 + (card_place)*120
         y = 690
         rect_id = self.canvas.create_rectangle(
             x, y, x+self.slotwidth, y+self.slotheight,
             fill="yellow"
         )
-        self.highlights[card_place] = rect_id
+        self.highlights[card_place-1] = rect_id
 
         if card_place <= len(self.cards):
             self.canvas.tag_raise(self.cards[card_place-1].character_id)
@@ -261,17 +337,20 @@ class hand():
     def fill_hand(self, tavern, num_cards=8):
         """Draw cards from the tavern to fill up the hand slots"""
         self.cards.clear()
-        for pos in self.card_positions[:num_cards]:
+        for _ in range(num_cards):
             card_obj = tavern.draw_card()
             if not card_obj:
                 break  # tavern empty
-            card_obj.set_x(pos)
-            card_obj.set_y(self.y + 15)
-
-            self.canvas.coords(card_obj.character_id, card_obj.get_x(), card_obj.get_y())
-            self.canvas.tag_raise(card_obj.character_id)
-
             self.cards.append(card_obj)
+        self.cards=sortHand(self.cards)
+        for (card, pos) in zip(self.cards, self.card_positions):
+            card.set_x(pos)
+            card.set_y(self.y + 15)
+            self.canvas.coords(card.character_id, card.get_x(), card.get_y())
+            self.canvas.tag_raise(card.character_id)
+
+            
+        
 
 class JokerWidget():
     def __init__(self, canvas, x, y, width, height):
@@ -469,29 +548,58 @@ game_canvas = tk.Canvas(game_screen, width=FRAME_WIDTH, height=FRAME_HEIGHT, bg=
 game_canvas.pack()
 game_canvas.create_image(0, 0, anchor="nw", image=bg_image)
 
+# Initialising deck
+deck=[]
 
-suits = ["diamonds", "hearts", "clubs", "spades"]
-ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "ace", "jack", "queen", "king"]
+for suit in SUITS:
+    for r in range(1,11):
+        deck.append(card(game_canvas, r, suit, 105, 144, -200, -200))
 
-super_cards=[]
-for suit in suits:
-    for rank in ranks:
-        temp_card = card(game_canvas, rank, suit, 105, 144, -200, -200)  
-        super_cards.append(temp_card)
+random.shuffle(deck)
+tavern1=tavern(game_canvas, deck, 69, 695, 102, 144)
 
-cards = []
-played_cards = []
-tavern1=tavern(game_canvas, super_cards, 69, 695, 102, 144)
-enemy1=enemy(game_canvas, "king", 598, 90, "diamonds", 204, 288)
-enemy1.update_health_bar()
+ # Initialising Hand  
 hand1=hand(game_canvas, 220, 680, 965, 178)
 hand1.fill_hand(tavern1)
-jokerwid=JokerWidget(game_canvas, 1160, 20, 220, 154)
-jokerwid.fill_jokers()
 
+# Initialising Castle and current_enemy
+castle=[]
+
+for rank in range(20,5,-5):
+    for suit in SUITS:
+        castle.append(enemy(game_canvas, rank, -400,-400, suit, 204, 288))
+
+
+kings=castle[:4]
+queens=castle[4:8]
+jacks=castle[8:12]
+
+random.shuffle(kings)
+random.shuffle(queens)
+random.shuffle(jacks)
+
+castle.clear()
+castle=kings+queens+jacks
+
+current_enemy=reveal_enemy(game_canvas, castle)
+current_enemy.update_health_bar()
+
+# Initialising Misc
 played_hand1 = played_hand(game_canvas, 452, 475, 500, 184)
 
 discard = discard_pile(game_canvas, 1300, 800, 105, 154)  # x,y is center
+
+jokerwid=JokerWidget(game_canvas, 1160, 20, 220, 154)
+jokerwid.fill_jokers()
+
+base_atk=0
+game_lost=False
+
+
+
+
+
+
 def discard_random(event=None):
     while played_hand1.cards:
         card_obj = played_hand1.cards.pop(0)   

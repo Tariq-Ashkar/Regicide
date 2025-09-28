@@ -1,0 +1,1 @@
+rint(c.rank, c.suit)
