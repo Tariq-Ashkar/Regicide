@@ -573,9 +573,11 @@ for suit in SUITS:
 random.shuffle(deck)
 tavern1=tavern(game_canvas, deck,FRAME_WIDTH*0.07,FRAME_HEIGHT*0.72, 102, 144)
 
- # Initialising Hand  
-hand1=hand(game_canvas, FRAME_WIDTH*0.22, FRAME_HEIGHT*0.7, 965, 178)
-hand1.fill_hand(tavern1)
+played_width = 500
+played_height = 184
+played_x = (FRAME_WIDTH - played_width) // 2
+played_y = int(FRAME_HEIGHT * 0.5)
+played_hand1 = played_hand(game_canvas, played_x, played_y, played_width, played_height)
 
 # Initialising Castle and current_enemy
 castle=[]
@@ -600,7 +602,12 @@ current_enemy=reveal_enemy(game_canvas, castle)
 current_enemy.update_health_bar()
 
 # Initialising Misc
-played_hand1 = played_hand(game_canvas, FRAME_WIDTH*0.355,FRAME_HEIGHT*0.5, 500, 184)
+hand_width = 965
+hand_height = 178
+hand_x = (FRAME_WIDTH - hand_width) // 2
+hand_y = int(FRAME_HEIGHT * 0.7)
+hand1 = hand(game_canvas, hand_x, hand_y, hand_width, hand_height)
+hand1.fill_hand(tavern1)
 
 discard = discard_pile(game_canvas, FRAME_WIDTH*0.9,FRAME_HEIGHT*0.8, 105, 154)  # x,y is center
 
