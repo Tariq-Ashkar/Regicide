@@ -64,10 +64,79 @@ def checkCombo(played, hand, base_atk):
         return combo_flag, combocards
 
     return False, []
-def reveal_enemy(canvas, castle):
-    next_enemy=castle.pop()
-    canvas.move(next_enemy.character_id, 598+400, 90+400)
+
+def reveal_next_enemy(canvas, castle):
+    next_enemy = castle.pop()
+    canvas.coords(next_enemy.character_id, 598, 90)
+
+    next_enemy.health_bar_bg = canvas.create_rectangle(450,
+                                                     50,
+                                                     950 *
+                                                     (next_enemy.hp / next_enemy.max_hp),
+                                                     70,
+                                                     fill="black")
+    next_enemy.health_bar = canvas.create_rectangle(450,
+                                                  50,
+                                                  950 *
+                                                  (next_enemy.hp / next_enemy.max_hp),
+                                                  70,
+                                                  fill="green")
     return next_enemy
+
+def play():
+
+    global discard
+    global current_enemy
+    global base_atk
+    global tavern1
+    global hand1
+    global played_hand1
+    global game_canvas
+    global castle
+
+    heart_flag=False
+    diamond_flag=False
+    club_flag=False
+    spade_flag=False
+    print(f"pre: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+    for c in played_hand1.cards:
+        # Flags so suits dont get triggered multiple times. Enemy suit accounted for in boolean. Hearts always before diamonds
+        if c.suit==H and heart_flag==False and current_enemy.suit!=H:  # Shuffle discard and pop cards from discard onto bottom of deck
+            tavern1.heal(discard)
+            heart_flag=True
+        if c.suit==D and diamond_flag==False and current_enemy.suit!=D : # Draws cards from top of tavern1.cards into hand until hand is 8 cards full. sorts hand.
+            for _ in range(0, base_atk):
+                if len(hand1.cards)==8:
+                    break 
+                hand1.cards.append(tavern1.cards.pop())
+            hand1.cards=sortHand(hand1.cards)
+            diamond_flag=True
+        if c.suit==S and spade_flag==False and current_enemy.suit!=S : # Reduces enemy attack
+            current_enemy.atk=0 if current_enemy.atk-base_atk<0 else current_enemy.atk-base_atk
+            spade_flag=True
+        if c.suit==C and club_flag==False and current_enemy.suit!=C: # Double damage
+            base_atk=base_atk*2
+            club_flag=True
+
+    # STEP 3 Attack enemy and check if theyre dead
+    current_enemy.hp=current_enemy.hp-base_atk   # DEALING DAMAGE
+    current_enemy.update_health_bar()
+    # (i)
+    if current_enemy.hp==0: # perfect kill?
+        tavern1.cards.append(current_enemy)
+        current_enemy=reveal_next_enemy(game_canvas, castle) #(iii)
+        enemy_isAlive=False
+    elif current_enemy.hp<0: # overkill?
+        discard.cards.append(current_enemy)
+        current_enemy=reveal_next_enemy(game_canvas, castle) #(iii)
+        enemy_isAlive=False
+    
+    # (ii)
+    discard.cards=discard.cards+played_hand1.cards
+    played_hand1.cards.clear()
+    base_atk=0
+    print(f"post: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+
 def image_resize(file, width, height):
     '''
     resizes an image to fit the frame
@@ -87,9 +156,9 @@ class enemy():
         self.height = height
         self.suit = suit
         self.rank = rank
-        self.max_hp = 200
+        self.max_hp = self.rank*2
         self.hp = self.max_hp
-        self.atk = 5
+        self.atk = rank
         self.canvas = canvas
         self.x = x
         self.y = y
@@ -108,23 +177,14 @@ class enemy():
                                                     image=self.image,
                                                     anchor="nw"
                                                 )
-        self.health_bar_bg = canvas.create_rectangle(450,
-                                                     50,
-                                                     950 *
-                                                     (self.hp / self.max_hp),
-                                                     70,
-                                                     fill="black")
-        self.health_bar = canvas.create_rectangle(450,
-                                                  50,
-                                                  950 *
-                                                  (self.hp / self.max_hp),
-                                                  70,
-                                                  fill="green")
-
+        self.health_bar_bg = None
+        self.health_bar = None
+        
     def update_health_bar(self):
         '''changes the length and colour of health bar'''
-        width = 950 * (self.hp / self.max_hp)
-        self.canvas.coords(self.health_bar, 450, 50, width, 70)
+        width = 500 * (self.hp / self.max_hp)
+        self.canvas.itemconfig(self.health_bar, fill="yellow")
+        self.canvas.coords(self.health_bar, 450, 50, 450+width, 70)
         if self.hp > self.max_hp / 2:
             self.canvas.itemconfig(self.health_bar, fill="green")
         elif self.hp > self.max_hp / 4:
@@ -173,6 +233,20 @@ class tavern():
             self.update_label()
             return card_obj
         return None
+    
+    def heal(self, discard):
+        temp = list(zip(discard.cards, discard.references))  # Pair the elements
+        random.shuffle(temp)  # Shuffle the pairs
+        res1, res2 = zip(*temp)  # Unzip into separate lists
+
+        discard.cards, discard.references = list(res1), list(res2)
+        for _ in range(0, base_atk):
+            if len(discard.cards)==0: # Check if theres anything left in discard
+                break
+            next_card=discard.cards.pop()
+            to_del=discard.references.pop()
+            del to_del
+            tavern1.cards.append(next_card)
 
 
 
@@ -387,14 +461,15 @@ class Joker():
     def on_click(self, event):
         print(f"You clicked {self.rank} of {self.suit}")
 
-class discard_pile:
+class discard_pile():
     def __init__(self, canvas, x, y, width, height):
         self.width = width
         self.height = height
-        self.cards = []   # list of PhotoImage references for the pile
+        self.cards = []   
         self.canvas = canvas
         self.x = x
         self.y = y
+        self.references=[] # list of PhotoImage references for the pile
 
         # Label under pile
         self.label = tk.Label(canvas, text="Discarded: 0", bg="grey", fg="white", font=("Arial", 14, "bold"))
@@ -419,7 +494,8 @@ class discard_pile:
 
         # Convert to Tk image and keep reference
         tk_img = ImageTk.PhotoImage(img)
-        self.cards.append(tk_img)
+        self.references.append(tk_img)
+        self.cards.append(card_obj)
 
         # Draw centered on pile
         self.canvas.create_image(self.x, self.y, image=tk_img, anchor="center")
@@ -571,7 +647,7 @@ random.shuffle(jacks)
 castle.clear()
 castle=kings+queens+jacks
 
-current_enemy=reveal_enemy(game_canvas, castle)
+current_enemy=reveal_next_enemy(game_canvas, castle)
 current_enemy.update_health_bar()
 
 # Initialising Misc
@@ -608,8 +684,8 @@ lose_btn.place(x=960, y=575)
 pause_btn = tk.Button(game_screen, text="pause", command=lambda: show_frame(pause_menu))
 pause_btn.place(x=960, y=535)  
 
-win_btn = tk.Button(game_screen, text="win", command=lambda: show_frame(win_menu))
-win_btn.place(x=960, y=495)  
+play_btn = tk.Button(game_screen, text="play", command=lambda: play())
+play_btn.place(x=960, y=495)  
 
 
 root.bind("<KeyRelease-1>", lambda e: hand1.unhighlight_card(1))
