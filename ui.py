@@ -33,7 +33,6 @@ def sortHand(hand):
     return sorting_dict[S]+sorting_dict[C]+sorting_dict[D]+sorting_dict[H]
 def checkCombo(played, hand, base_atk):
     if len(played) == 1:
-        print("here")
         if played[0].rank == 1:
             return True, hand
         combocards = [
@@ -65,22 +64,23 @@ def checkCombo(played, hand, base_atk):
 
     return False, []
 
-def reveal_next_enemy(canvas, castle):
+def reveal_next_enemy(canvas, castle, current_enemy):
+    if current_enemy:
+        canvas.delete(current_enemy.health_bar_bg)
+        canvas.delete(current_enemy.health_bar)
+    
+        
     next_enemy = castle.pop()
     canvas.coords(next_enemy.character_id, 598, 90)
 
-    next_enemy.health_bar_bg = canvas.create_rectangle(450,
-                                                     50,
-                                                     950 *
-                                                     (next_enemy.hp / next_enemy.max_hp),
-                                                     70,
-                                                     fill="black")
-    next_enemy.health_bar = canvas.create_rectangle(450,
-                                                  50,
-                                                  950 *
-                                                  (next_enemy.hp / next_enemy.max_hp),
-                                                  70,
-                                                  fill="green")
+    # Correct health bar creation
+    next_enemy.health_bar_bg = canvas.create_rectangle(
+        450, 50, 950, 70, fill="black"
+    )
+    next_enemy.health_bar = canvas.create_rectangle(
+        450, 50, 450 + 500 * (next_enemy.hp / next_enemy.max_hp), 70, fill="green"
+    )
+    
     return next_enemy
 
 def play():
@@ -105,11 +105,7 @@ def play():
             tavern1.heal(discard)
             heart_flag=True
         if c.suit==D and diamond_flag==False and current_enemy.suit!=D : # Draws cards from top of tavern1.cards into hand until hand is 8 cards full. sorts hand.
-            for _ in range(0, base_atk):
-                if len(hand1.cards)==8:
-                    break 
-                hand1.cards.append(tavern1.cards.pop())
-            hand1.cards=sortHand(hand1.cards)
+            hand1.fill_hand(tavern1, base_atk)
             diamond_flag=True
         if c.suit==S and spade_flag==False and current_enemy.suit!=S : # Reduces enemy attack
             current_enemy.atk=0 if current_enemy.atk-base_atk<0 else current_enemy.atk-base_atk
@@ -124,18 +120,26 @@ def play():
     # (i)
     if current_enemy.hp==0: # perfect kill?
         tavern1.cards.append(current_enemy)
-        current_enemy=reveal_next_enemy(game_canvas, castle) #(iii)
+        game_canvas.coords(current_enemy.character_id, -200, -200)
+        current_enemy=reveal_next_enemy(game_canvas, castle, current_enemy) #(iii, current_enemy
+        current_enemy.update_health_bar()
+
         enemy_isAlive=False
     elif current_enemy.hp<0: # overkill?
-        discard.cards.append(current_enemy)
-        current_enemy=reveal_next_enemy(game_canvas, castle) #(iii)
+        discard.add_card(current_enemy)
+        current_enemy=reveal_next_enemy(game_canvas, castle, current_enemy) #(iii)
+        current_enemy.update_health_bar()
+
         enemy_isAlive=False
     
     # (ii)
-    discard.cards=discard.cards+played_hand1.cards
-    played_hand1.cards.clear()
+    while len(played_hand1.cards)>0:
+        discard.add_card(played_hand1.cards.pop())
+   
     base_atk=0
     print(f"post: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+
+    
 
 def image_resize(file, width, height):
     '''
@@ -235,9 +239,12 @@ class tavern():
         return None
     
     def heal(self, discard):
+        print(discard.references)
         temp = list(zip(discard.cards, discard.references))  # Pair the elements
         random.shuffle(temp)  # Shuffle the pairs
-        res1, res2 = zip(*temp)  # Unzip into separate lists
+        print(discard.cards)
+        print(discard.references)
+        res1, res2 =zip(*temp)  # Unzip into separate lists
 
         discard.cards, discard.references = list(res1), list(res2)
         for _ in range(0, base_atk):
@@ -284,10 +291,9 @@ class card():
         global hand1
         hand1.cards.remove(self)
         played_hand1.add_card(self)
-        print(hand1.cards)
-        print(played_hand1.cards)
+
         combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
-        print(combo_cards)
+
         for c in hand1.cards:
             if isinstance(c, card) and c.raised:
                 c.canvas.move(c.character_id, 0, +20)
@@ -400,13 +406,16 @@ class hand():
     
     def fill_hand(self, tavern, num_cards=8):
         """Draw cards from the tavern to fill up the hand slots"""
-        self.cards.clear()
         for _ in range(num_cards):
             card_obj = tavern.draw_card()
-            if not card_obj:
+            print(self.cards)
+
+            if not card_obj or len(self.cards)==8:
                 break  # tavern empty
             self.cards.append(card_obj)
         self.cards=sortHand(self.cards)
+        print(self.cards)
+        print(self.card_positions)
         for (card, pos) in zip(self.cards, self.card_positions):
             card.set_x(pos)
             card.set_y(self.y + 15)
@@ -647,7 +656,7 @@ random.shuffle(jacks)
 castle.clear()
 castle=kings+queens+jacks
 
-current_enemy=reveal_next_enemy(game_canvas, castle)
+current_enemy=reveal_next_enemy(game_canvas, castle, None)
 current_enemy.update_health_bar()
 
 # Initialising Misc
