@@ -83,13 +83,15 @@ def checkCombo(played, hand, base_atk):
     return False, []
 
 def reveal_next_enemy(canvas, castle, current_enemy):
+    next_enemy = castle.pop()
+
     if current_enemy:
         canvas.delete(current_enemy.health_bar_bg)
         canvas.delete(current_enemy.health_bar)
         canvas.delete(current_enemy.hp_label.label_id)
+        enemy_attack.update_label(next_enemy.atk)
     
         
-    next_enemy = castle.pop()
     canvas.coords(next_enemy.character_id, 598, 90)
 
     # Correct health bar creation
@@ -164,6 +166,16 @@ def attack():
     if enemy_isAlive and current_enemy.atk>0:
         play_btn.configure(text = "Defend", command=lambda: defend())
     player_attack.update_label(0)
+    for c in hand1.cards:
+        if isinstance(c, card) and c.raised and not diamond_flag:
+
+            c.set_y(c.get_y() + 20)
+            game_canvas.move(c.character_id, 0, +20)
+            if c.border_id:
+                game_canvas.move(c.border_id, 0, +20)
+        c.raised = False
+
+
     
 
 
@@ -253,6 +265,99 @@ class enemy():
         else:
             self.canvas.itemconfig(self.health_bar, fill="red")
         self.hp_label.update_label(f"{self.hp} / {self.max_hp}")
+    
+    def on_click(self, event):
+        global base_atk
+        global played_hand1
+        global hand1
+        global player_attack
+        hand1.cards.remove(self)
+        played_hand1.add_card(self)
+
+        if play_btn.cget("text")=="Attack":
+            combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
+
+            for c in hand1.cards:
+                if isinstance(c, card) and c.raised:
+    
+                    c.set_y(c.get_y() + 20)
+                    c.canvas.move(c.character_id, 0, +20)
+                    if c.border_id:
+                        c.canvas.move(c.border_id, 0, +20)
+                    c.raised = False
+
+            
+            if combo_flag:
+                for c in combo_cards:
+                    if isinstance(c, card) and not c.raised:
+                        c.set_y(c.get_y() - 20)
+                        c.canvas.move(c.character_id, 0, -20)
+                        if c.border_id:
+                            c.canvas.move(c.border_id, 0, -20)
+                        c.raised = True
+        base_atk=base_atk+self.rank
+
+        displayed_attack=base_atk
+        for c in played_hand1.cards:
+            if c.suit==C:
+                displayed_attack=base_atk*2
+                break
+        player_attack.update_label(displayed_attack)
+        print(f"Base Attack: {base_atk}")
+
+        self.canvas.tag_bind(self.character_id, "<Button-1>", self.return_to_hand)
+        for idx, card_in_hand in enumerate(hand1.cards):
+            pos = hand1.card_positions[idx]
+            card_in_hand.set_x(pos)
+            card_in_hand.set_y(card_in_hand.get_y())
+            self.canvas.coords(card_in_hand.character_id, card_in_hand.get_x(), card_in_hand.get_y())
+            self.canvas.tag_raise(card_in_hand.character_id)
+
+    def set_x(self, new_x):
+        self.x = new_x
+
+    def get_x(self):
+        return self.x
+
+    def set_y(self, new_y):
+        self.y = new_y
+
+    def get_y(self):
+        return self.y
+    
+    def return_to_hand(self, event):
+        global base_atk
+        played_hand1.cards.remove(self)
+        base_atk=base_atk-self.rank
+
+        displayed_attack=base_atk
+        for c in played_hand1.cards:
+            if c.suit==C:
+                displayed_attack=base_atk*2
+                break
+        player_attack.update_label(displayed_attack)
+
+        tavern1.cards.append(self)
+        game_canvas.coords(self.character_id, -200, -200)
+        hand1.fill_hand(tavern1, 1)
+        self.canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
+        
+        combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
+
+        for c in hand1.cards:
+            if isinstance(c, card) and c.raised:
+                c.raised = False
+
+        
+        if combo_flag:
+            for c in combo_cards:
+                if isinstance(c, card) and not c.raised:
+                    c.set_y(c.get_y() - 20)
+                    c.canvas.move(c.character_id, 0, -20)
+                    if c.border_id:
+                        c.canvas.move(c.border_id, 0, -20)
+                    c.raised = True
+
 
 
 
@@ -313,6 +418,8 @@ class tavern():
             to_del=discard.references.pop()
             del to_del
             tavern1.cards.append(next_card)
+            self.canvas.tag_bind(next_card.character_id, "<Button-1>", next_card.on_click)
+
 
 
 
@@ -342,7 +449,43 @@ class card():
             image=self.image,
             anchor="nw"
         )
-        canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
+        self.canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
+
+    def return_to_hand(self, event):
+        global base_atk
+        played_hand1.cards.remove(self)
+        base_atk=base_atk-self.rank
+
+        displayed_attack=base_atk
+        for c in played_hand1.cards:
+            if c.suit==C:
+                displayed_attack=base_atk*2
+                break
+        player_attack.update_label(displayed_attack)
+
+        tavern1.cards.append(self)
+        game_canvas.coords(self.character_id, -200, -200)
+        hand1.fill_hand(tavern1, 1)
+        self.canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
+        
+        combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
+
+        for c in hand1.cards:
+            if isinstance(c, card) and c.raised:
+                c.raised = False
+
+        
+        if combo_flag:
+            for c in combo_cards:
+                if isinstance(c, card) and not c.raised:
+                    c.set_y(c.get_y() - 20)
+                    c.canvas.move(c.character_id, 0, -20)
+                    if c.border_id:
+                        c.canvas.move(c.border_id, 0, -20)
+                    c.raised = True
+        
+
+
 
     def on_click(self, event):
         global base_atk
@@ -352,33 +495,46 @@ class card():
         hand1.cards.remove(self)
         played_hand1.add_card(self)
 
-        combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        if play_btn.cget("text")=="Attack":
+            combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
-        for c in hand1.cards:
-            if isinstance(c, card) and c.raised:
-                c.canvas.move(c.character_id, 0, +20)
-                if c.border_id:
-                    c.canvas.move(c.border_id, 0, +20)
-                c.raised = False
-
-        
-        if combo_flag:
-            for c in combo_cards:
-                if isinstance(c, card) and not c.raised:
-                    c.canvas.move(c.character_id, 0, -20)
+            for c in hand1.cards:
+                if isinstance(c, card) and c.raised:
+    
+                    c.set_y(c.get_y() + 20)
+                    c.canvas.move(c.character_id, 0, +20)
                     if c.border_id:
-                        c.canvas.move(c.border_id, 0, -20)
-                    c.raised = True
+                        c.canvas.move(c.border_id, 0, +20)
+                    c.raised = False
+
+            
+            if combo_flag:
+                for c in combo_cards:
+                    if isinstance(c, card) and not c.raised:
+                        c.set_y(c.get_y() - 20)
+                        c.canvas.move(c.character_id, 0, -20)
+                        if c.border_id:
+                            c.canvas.move(c.border_id, 0, -20)
+                        c.raised = True
         base_atk=base_atk+self.rank
 
         displayed_attack=base_atk
-        for c in played_hand1.cards:
-            if c.suit==C:
-                displayed_attack=base_atk*2
-                break
+
+        if play_btn.cget("text")=="Attack":
+            for c in played_hand1.cards:
+                if c.suit==C:
+                    displayed_attack=base_atk*2
+                    break
         player_attack.update_label(displayed_attack)
         print(f"Base Attack: {base_atk}")
 
+        self.canvas.tag_bind(self.character_id, "<Button-1>", self.return_to_hand)
+        for idx, card_in_hand in enumerate(hand1.cards):
+            pos = hand1.card_positions[idx]
+            card_in_hand.set_x(pos)
+            card_in_hand.set_y(card_in_hand.get_y())
+            self.canvas.coords(card_in_hand.character_id, card_in_hand.get_x(), card_in_hand.get_y())
+            self.canvas.tag_raise(card_in_hand.character_id)
     def set_x(self, new_x):
         self.x = new_x
 
@@ -475,9 +631,14 @@ class hand():
         """Draw cards from the tavern to fill up the hand slots"""
         for _ in range(num_cards):
             card_obj = tavern.draw_card()
-
             if not card_obj or len(self.cards)==8:
-                break  # tavern empty
+                break  # tavern empty or hand full
+            # Resize enemy cards to normal card size if drawn
+            if isinstance(card_obj, enemy):
+                card_obj.width = 105
+                card_obj.height = 144
+                card_obj.image = image_resize(card_obj.filepath, card_obj.width, card_obj.height)
+                self.canvas.itemconfig(card_obj.character_id, image=card_obj.image)
             self.cards.append(card_obj)
         self.cards=sortHand(self.cards)
 
@@ -793,8 +954,6 @@ root.bind("<KeyRelease-7>", lambda e: hand1.unhighlight_card(7))
 
 root.bind("<KeyPress-8>", lambda e: hand1.highlight_card(8))
 root.bind("<KeyRelease-8>", lambda e: hand1.unhighlight_card(8))
-
-
 
 
 show_frame(main_menu)
