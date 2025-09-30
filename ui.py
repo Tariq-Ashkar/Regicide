@@ -17,6 +17,24 @@ root.config(bg="grey")
 FRAME_WIDTH = 1400
 FRAME_HEIGHT = 1000
 
+class AttackLabel():
+    def __init__(self, canvas, x, y, width, height):
+        self.width = width
+        self.height = height
+        self.canvas = canvas
+        self.x = x
+        self.y = y
+
+        self.label_id = canvas.create_text(
+            self.x + self.width // 2,
+            self.y + self.height + 20,
+            text="faswghshsw",
+            font=("Arial", 16, "bold"),
+            fill="white"
+        )
+
+    def update_label(self, number):
+        self.canvas.itemconfig(self.label_id, text=number)
 
 def sortHand(hand):
     sorting_dict={S:[],
@@ -68,6 +86,7 @@ def reveal_next_enemy(canvas, castle, current_enemy):
     if current_enemy:
         canvas.delete(current_enemy.health_bar_bg)
         canvas.delete(current_enemy.health_bar)
+        canvas.delete(current_enemy.hp_label.label_id)
     
         
     next_enemy = castle.pop()
@@ -80,10 +99,12 @@ def reveal_next_enemy(canvas, castle, current_enemy):
     next_enemy.health_bar = canvas.create_rectangle(
         450, 50, 450 + 500 * (next_enemy.hp / next_enemy.max_hp), 70, fill="green"
     )
+
+    next_enemy.hp_label=AttackLabel(canvas, 650, 0, 100, 30)
     
     return next_enemy
 
-def play():
+def attack():
 
     global discard
     global current_enemy
@@ -93,7 +114,8 @@ def play():
     global played_hand1
     global game_canvas
     global castle
-
+    global enemy_attack
+    enemy_isAlive=True
     heart_flag=False
     diamond_flag=False
     club_flag=False
@@ -109,6 +131,7 @@ def play():
             diamond_flag=True
         if c.suit==S and spade_flag==False and current_enemy.suit!=S : # Reduces enemy attack
             current_enemy.atk=0 if current_enemy.atk-base_atk<0 else current_enemy.atk-base_atk
+            enemy_attack.update_label(current_enemy.atk)
             spade_flag=True
         if c.suit==C and club_flag==False and current_enemy.suit!=C: # Double damage
             base_atk=base_atk*2
@@ -129,17 +152,50 @@ def play():
         discard.add_card(current_enemy)
         current_enemy=reveal_next_enemy(game_canvas, castle, current_enemy) #(iii)
         current_enemy.update_health_bar()
-
         enemy_isAlive=False
     
     # (ii)
     while len(played_hand1.cards)>0:
+
         discard.add_card(played_hand1.cards.pop())
    
     base_atk=0
     print(f"post: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
-
+    if enemy_isAlive and current_enemy.atk>0:
+        play_btn.configure(text = "Defend", command=lambda: defend())
+    player_attack.update_label(0)
     
+
+
+
+cumulative_blocked=0
+def defend():      
+    print('defending')  
+    global discard
+    global current_enemy
+    global base_atk
+    global tavern1
+    global hand1
+    global played_hand1
+    global game_canvas
+    global castle
+    global enemy_attack
+    global cumulative_blocked
+
+    incoming_damage=current_enemy.atk
+    for _ in range(len(played_hand1.cards)):
+        c=played_hand1.cards.pop()
+        cumulative_blocked=cumulative_blocked+c.rank
+        discard.add_card(c)
+    
+    if cumulative_blocked>=incoming_damage:
+        play_btn.configure(text = "Attack", command=lambda: attack())
+        player_attack.update_label(0)
+        base_atk=0
+        return
+    elif cumulative_blocked<incoming_damage and len(hand1.cards)==0:
+        show_frame(lose_menu)
+        return
 
 def image_resize(file, width, height):
     '''
@@ -169,10 +225,10 @@ class enemy():
 
 
         
-        file_path = f"enemies/{self.suit}/{self.rank} {self.suit}.png"
+        self.filepath = f"enemies/{self.suit}/{self.rank} {self.suit}.png"
 
         
-        self.image = image_resize(file_path, self.width, self.height)
+        self.image = image_resize(self.filepath, self.width, self.height)
 
         # draw sprite
         self.character_id = canvas.create_image(
@@ -183,6 +239,7 @@ class enemy():
                                                 )
         self.health_bar_bg = None
         self.health_bar = None
+        self.hp_label=None
         
     def update_health_bar(self):
         '''changes the length and colour of health bar'''
@@ -195,6 +252,7 @@ class enemy():
             self.canvas.itemconfig(self.health_bar, fill="yellow")
         else:
             self.canvas.itemconfig(self.health_bar, fill="red")
+        self.hp_label.update_label(f"{self.hp} / {self.max_hp}")
 
 
 
@@ -239,14 +297,15 @@ class tavern():
         return None
     
     def heal(self, discard):
-        print(discard.references)
-        temp = list(zip(discard.cards, discard.references))  # Pair the elements
-        random.shuffle(temp)  # Shuffle the pairs
-        print(discard.cards)
-        print(discard.references)
-        res1, res2 =zip(*temp)  # Unzip into separate lists
+        try:
+            temp = list(zip(discard.cards, discard.references))  # Pair the elements
+            random.shuffle(temp)  # Shuffle the pairs
 
-        discard.cards, discard.references = list(res1), list(res2)
+            res1, res2 =zip(*temp)  # Unzip into separate lists
+
+            discard.cards, discard.references = list(res1), list(res2)
+        except(Exception):
+            return
         for _ in range(0, base_atk):
             if len(discard.cards)==0: # Check if theres anything left in discard
                 break
@@ -289,6 +348,7 @@ class card():
         global base_atk
         global played_hand1
         global hand1
+        global player_attack
         hand1.cards.remove(self)
         played_hand1.add_card(self)
 
@@ -310,6 +370,13 @@ class card():
                         c.canvas.move(c.border_id, 0, -20)
                     c.raised = True
         base_atk=base_atk+self.rank
+
+        displayed_attack=base_atk
+        for c in played_hand1.cards:
+            if c.suit==C:
+                displayed_attack=base_atk*2
+                break
+        player_attack.update_label(displayed_attack)
         print(f"Base Attack: {base_atk}")
 
     def set_x(self, new_x):
@@ -408,14 +475,12 @@ class hand():
         """Draw cards from the tavern to fill up the hand slots"""
         for _ in range(num_cards):
             card_obj = tavern.draw_card()
-            print(self.cards)
 
             if not card_obj or len(self.cards)==8:
                 break  # tavern empty
             self.cards.append(card_obj)
         self.cards=sortHand(self.cards)
-        print(self.cards)
-        print(self.card_positions)
+
         for (card, pos) in zip(self.cards, self.card_positions):
             card.set_x(pos)
             card.set_y(self.y + 15)
@@ -667,6 +732,15 @@ discard = discard_pile(game_canvas, 1300, 800, 105, 154)  # x,y is center
 jokerwid=JokerWidget(game_canvas, 1160, 20, 220, 154)
 jokerwid.fill_jokers()
 
+
+enemy_attack=AttackLabel(game_canvas, 650, 340, 100, 30)
+enemy_attack.update_label(current_enemy.atk)
+
+
+player_attack=AttackLabel(game_canvas, 650, 405, 100, 30)
+player_attack.update_label(0)
+
+
 base_atk=0
 game_lost=False
 
@@ -693,7 +767,7 @@ lose_btn.place(x=960, y=575)
 pause_btn = tk.Button(game_screen, text="pause", command=lambda: show_frame(pause_menu))
 pause_btn.place(x=960, y=535)  
 
-play_btn = tk.Button(game_screen, text="play", command=lambda: play())
+play_btn = tk.Button(game_screen, text="Attack", command=lambda: attack())
 play_btn.place(x=960, y=495)  
 
 
