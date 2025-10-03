@@ -122,7 +122,8 @@ def attack():
     diamond_flag=False
     club_flag=False
     spade_flag=False
-    print(f"pre: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+    print(f"pre: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk}")
+    print(f"Hand {hand1.cards}, played {played_hand1.cards}")
     for c in played_hand1.cards:
         # Flags so suits dont get triggered multiple times. Enemy suit accounted for in boolean. Hearts always before diamonds
         if c.suit==H and heart_flag==False and current_enemy.suit!=H:  # Shuffle discard and pop cards from discard onto bottom of deck
@@ -163,11 +164,13 @@ def attack():
    
     base_atk=0
     print(f"post: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+    print(f"Hand {hand1.cards}, played {played_hand1.cards}")
+
     if enemy_isAlive and current_enemy.atk>0:
         play_btn.configure(text = "Defend", command=lambda: defend())
     player_attack.update_label(0)
     for c in hand1.cards:
-        if isinstance(c, card) and c.raised and not diamond_flag:
+        if ((isinstance(c, card) or isinstance(c, enemy))) and c.raised and not diamond_flag:
 
             c.set_y(c.get_y() + 20)
             game_canvas.move(c.character_id, 0, +20)
@@ -205,7 +208,7 @@ def defend():
         player_attack.update_label(0)
         base_atk=0
         return
-    elif cumulative_blocked<incoming_damage and len(hand1.cards)==0:
+    elif cumulative_blocked<incoming_damage and len(hand1.cards)==0 and jesters==0:
         show_frame(lose_menu)
         return
 
@@ -234,6 +237,8 @@ class enemy():
         self.canvas = canvas
         self.x = x
         self.y = y
+        self.raised=False
+        self.border_id = None
 
 
         
@@ -271,14 +276,15 @@ class enemy():
         global played_hand1
         global hand1
         global player_attack
+        global current_enemy
         hand1.cards.remove(self)
         played_hand1.add_card(self)
-
+        self.raised=False
         if play_btn.cget("text")=="Attack":
             combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
-                if isinstance(c, card) and c.raised:
+                if ((isinstance(c, card) or isinstance(c, enemy))) and c.raised:
     
                     c.set_y(c.get_y() + 20)
                     c.canvas.move(c.character_id, 0, +20)
@@ -289,7 +295,7 @@ class enemy():
             
             if combo_flag:
                 for c in combo_cards:
-                    if isinstance(c, card) and not c.raised:
+                    if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                         c.set_y(c.get_y() - 20)
                         c.canvas.move(c.character_id, 0, -20)
                         if c.border_id:
@@ -299,7 +305,7 @@ class enemy():
 
         displayed_attack=base_atk
         for c in played_hand1.cards:
-            if c.suit==C:
+            if c.suit==C and not current_enemy.suit==C:
                 displayed_attack=base_atk*2
                 break
         player_attack.update_label(displayed_attack)
@@ -327,12 +333,14 @@ class enemy():
     
     def return_to_hand(self, event):
         global base_atk
+        global current_enemy
+        self.raised=False
         played_hand1.cards.remove(self)
         base_atk=base_atk-self.rank
 
         displayed_attack=base_atk
         for c in played_hand1.cards:
-            if c.suit==C:
+            if c.suit==C and not current_enemy.suit==C:
                 displayed_attack=base_atk*2
                 break
         player_attack.update_label(displayed_attack)
@@ -345,13 +353,13 @@ class enemy():
         combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
         for c in hand1.cards:
-            if isinstance(c, card) and c.raised:
+            if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
                 c.raised = False
 
         
         if combo_flag:
             for c in combo_cards:
-                if isinstance(c, card) and not c.raised:
+                if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                     c.set_y(c.get_y() - 20)
                     c.canvas.move(c.character_id, 0, -20)
                     if c.border_id:
@@ -452,13 +460,17 @@ class card():
         self.canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
 
     def return_to_hand(self, event):
+        global current_enemy
+
         global base_atk
+        self.raised=False
+
         played_hand1.cards.remove(self)
         base_atk=base_atk-self.rank
 
         displayed_attack=base_atk
         for c in played_hand1.cards:
-            if c.suit==C:
+            if c.suit==C and not current_enemy.suit==C:
                 displayed_attack=base_atk*2
                 break
         player_attack.update_label(displayed_attack)
@@ -471,13 +483,13 @@ class card():
         combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
         for c in hand1.cards:
-            if isinstance(c, card) and c.raised:
+            if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
                 c.raised = False
 
         
         if combo_flag:
             for c in combo_cards:
-                if isinstance(c, card) and not c.raised:
+                if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                     c.set_y(c.get_y() - 20)
                     c.canvas.move(c.character_id, 0, -20)
                     if c.border_id:
@@ -492,6 +504,9 @@ class card():
         global played_hand1
         global hand1
         global player_attack
+        global current_enemy
+        self.raised=False
+
         hand1.cards.remove(self)
         played_hand1.add_card(self)
 
@@ -499,7 +514,7 @@ class card():
             combo_flag, combo_cards= checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
-                if isinstance(c, card) and c.raised:
+                if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
     
                     c.set_y(c.get_y() + 20)
                     c.canvas.move(c.character_id, 0, +20)
@@ -510,7 +525,7 @@ class card():
             
             if combo_flag:
                 for c in combo_cards:
-                    if isinstance(c, card) and not c.raised:
+                    if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                         c.set_y(c.get_y() - 20)
                         c.canvas.move(c.character_id, 0, -20)
                         if c.border_id:
@@ -522,7 +537,7 @@ class card():
 
         if play_btn.cget("text")=="Attack":
             for c in played_hand1.cards:
-                if c.suit==C:
+                if c.suit==C and not current_enemy.suit==C:
                     displayed_attack=base_atk*2
                     break
         player_attack.update_label(displayed_attack)
@@ -623,30 +638,33 @@ class hand():
                                                     stipple="gray50"
                                                     )
     
+    def update_positions(self):
+        """Update all card positions in hand after any change."""
+        for idx, card in enumerate(self.cards):
+            pos = self.card_positions[idx]
+            card.set_x(pos)
+            card.set_y(self.y + 15)
+            self.canvas.coords(card.character_id, card.get_x(), card.get_y())
+            self.canvas.tag_raise(card.character_id)
+            card.raised = False
+            if hasattr(card, 'border_id') and card.border_id:
+                self.canvas.coords(card.border_id, card.get_x()-2, card.get_y()-2, card.get_x()+card.width+2, card.get_y()+card.height+2)
 
-    
-        
-    
     def fill_hand(self, tavern, num_cards=8):
-        """Draw cards from the tavern to fill up the hand slots"""
         for _ in range(num_cards):
             card_obj = tavern.draw_card()
             if not card_obj or len(self.cards)==8:
-                break  # tavern empty or hand full
-            # Resize enemy cards to normal card size if drawn
+                break
             if isinstance(card_obj, enemy):
                 card_obj.width = 105
                 card_obj.height = 144
                 card_obj.image = image_resize(card_obj.filepath, card_obj.width, card_obj.height)
                 self.canvas.itemconfig(card_obj.character_id, image=card_obj.image)
-            self.cards.append(card_obj)
-        self.cards=sortHand(self.cards)
+                self.canvas.tag_bind(card_obj.character_id, "<Button-1>", card_obj.on_click)
 
-        for (card, pos) in zip(self.cards, self.card_positions):
-            card.set_x(pos)
-            card.set_y(self.y + 15)
-            self.canvas.coords(card.character_id, card.get_x(), card.get_y())
-            self.canvas.tag_raise(card.character_id)
+            self.cards.append(card_obj)
+        self.cards = sortHand(self.cards)
+        self.update_positions()
 
             
         
@@ -690,6 +708,9 @@ def play_jester(joker_instance=None):
         hand1.fill_hand(tavern1, 8)
         jesters -= 1
         print("Jester Played! Jokers left:", jesters)
+        print(f"post: tavern: {len(tavern1.cards)}, hand: {len(hand1.cards)}, discard: {len(discard.cards)}, hp: {current_enemy.hp}, atk: {current_enemy.atk} ")
+        print(f"Hand {hand1.cards}, played {played_hand1.cards}")
+
         # Change the clicked joker's image to card back
         if joker_instance:
             card_back_img = image_resize("back/Card back.png", joker_instance.width, joker_instance.height)
@@ -758,7 +779,7 @@ class discard_pile():
         self.cards.append(card_obj)
 
         # Draw centered on pile
-        self.canvas.create_image(self.x, self.y, image=tk_img, anchor="center")
+        card_obj.character_id = self.canvas.create_image(self.x, self.y, image=tk_img, anchor="center")
 
         # Update counter
         self.label.config(text=f"Discarded: {len(self.cards)}")
