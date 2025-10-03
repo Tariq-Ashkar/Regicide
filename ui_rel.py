@@ -479,8 +479,8 @@ menu_canvas = tk.Canvas(main_menu,
                         height=FRAME_HEIGHT,
                         bg="grey")
 menu_canvas.pack()
-bg_image = image_resize("board.png", FRAME_WIDTH, FRAME_HEIGHT)
-menu_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+bg_image = image_resize("board.png",  width=FRAME_WIDTH+200, height=FRAME_HEIGHT+200,)
+menu_canvas.create_image(FRAME_WIDTH//2, FRAME_HEIGHT//2, anchor="c", image=bg_image)
 
 start_btn = tk.Button(main_menu,
                       text="Start Game",
@@ -505,7 +505,7 @@ pause_canvas = tk.Canvas(pause_menu,
                        bg="grey")
 pause_canvas.pack()
 
-pause_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+pause_canvas.create_image(FRAME_WIDTH//2, FRAME_HEIGHT//2, anchor="c", image=bg_image)
 pause_img = image_resize('Pause.png', 400, 200)
 pause_title=pause_canvas.create_image(500, 50, anchor="nw", image=pause_img)
 
@@ -529,7 +529,7 @@ win_canvas = tk.Canvas(win_menu,
                        bg="grey")
 win_canvas.pack()
 
-win_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+win_canvas.create_image(FRAME_WIDTH//2, FRAME_HEIGHT//2, anchor="c", image=bg_image)
 win_img = image_resize('win.png', 400, 200)
 win_title=win_canvas.create_image(500, 50, anchor="nw", image=win_img)
 
@@ -561,7 +561,7 @@ back_to_menu_btn.place(x=600, y=200, height=50, width=200)
 
 game_canvas = tk.Canvas(game_screen, width=FRAME_WIDTH, height=FRAME_HEIGHT, bg="grey")
 game_canvas.pack()
-game_canvas.create_image(0, 0, anchor="nw", image=bg_image)
+game_canvas.create_image(FRAME_WIDTH//2, FRAME_HEIGHT//2, anchor="c", image=bg_image)
 
 # Initialising deck
 deck=[]
@@ -605,7 +605,7 @@ current_enemy.update_health_bar()
 hand_width = 965
 hand_height = 178
 hand_x = (FRAME_WIDTH - hand_width) // 2
-hand_y = int(FRAME_HEIGHT * 0.7)
+hand_y = int(FRAME_HEIGHT * 0.77)
 hand1 = hand(game_canvas, hand_x, hand_y, hand_width, hand_height)
 hand1.fill_hand(tavern1)
 
