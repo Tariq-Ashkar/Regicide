@@ -673,7 +673,31 @@ class JokerWidget():
             joker1=Joker(game_canvas, 100, 144, slot, 25)
 
 
-        
+# Add a global variable to track jokers
+jesters = 2
+
+def play_jester(joker_instance=None):
+    global jesters
+    global hand1
+    global tavern1
+    global discard
+
+    if jesters > 0:
+        # Move all hand cards to discard
+        while hand1.cards:
+            discard.add_card(hand1.cards.pop())
+        # Refill hand to 8 cards
+        hand1.fill_hand(tavern1, 8)
+        jesters -= 1
+        print("Jester Played! Jokers left:", jesters)
+        # Change the clicked joker's image to card back
+        if joker_instance:
+            card_back_img = image_resize("back/Card back.png", joker_instance.width, joker_instance.height)
+            joker_instance.canvas.itemconfig(joker_instance.character_id, image=card_back_img)
+            joker_instance.image = card_back_img  # keep reference
+    else:
+        print("No more jesters left!")
+
 class Joker():
     def __init__(self, canvas, width, height, x, y):
         self.width = width
@@ -694,7 +718,8 @@ class Joker():
         canvas.tag_bind(self.character_id, "<Button-1>", self.on_click)
 
     def on_click(self, event):
-        print(f"You clicked {self.rank} of {self.suit}")
+        play_jester(self)
+
 
 class discard_pile():
     def __init__(self, canvas, x, y, width, height):
