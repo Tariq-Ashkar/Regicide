@@ -58,8 +58,7 @@ def sortHand(hand):
     return sorting_dict[S] + sorting_dict[C] + sorting_dict[D] + sorting_dict[H]
 
 def checkCombo(played, hand, base_atk):
-    if len(played) == 0:
-        return False, []
+
     if len(played) == 1:
         if played[0].rank == 1:
             return True, hand
@@ -195,7 +194,7 @@ def attack():
             if getattr(c, 'border_id', None):
                 game_canvas.move(c.border_id, 0, +20)
         c.raised = False
-
+    hand1.update_positions()
 cumulative_blocked = 0
 
 def defend():
@@ -223,10 +222,13 @@ def defend():
         player_attack.update_label(0)
         base_atk = 0
         cumulative_blocked = 0
+        hand1.update_positions()
         return
     elif cumulative_blocked < incoming_damage and len(hand1.cards) == 0 and jesters == 0:
         show_frame(lose_menu)
+        hand1.update_positions()
         return
+    hand1.update_positions()
 
 def image_resize(file, width, height):
     og_image = Image.open(file)
@@ -260,7 +262,7 @@ class enemy():
         self.health_bar_bg = None
         self.health_bar = None
         self.hp_label = None
-
+    
     def update_health_bar(self):
         width = 500 * (self.hp / self.max_hp)
         self.canvas.itemconfig(self.health_bar, fill="yellow")
@@ -503,6 +505,7 @@ class card():
 
         hand1.cards.remove(self)
         played_hand1.add_card(self)
+        hand1.update_positions()
 
         if play_btn.cget("text") == "Attack":
             combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
@@ -536,9 +539,8 @@ class card():
         print(f"Base Attack: {base_atk}")
 
         safe_bind(self.canvas, self.character_id, "<Button-1>", self.return_to_hand)
-        hand1.update_positions()
 
-    def set_x(self, new_x):
+    def set_x(self, new_x): 
         self.x = new_x
 
     def get_x(self):
