@@ -57,7 +57,7 @@ def sortHand(hand):
         sorting_dict[suit] = sorted(sorting_dict[suit], key=lambda c: c.rank)
     return sorting_dict[S] + sorting_dict[C] + sorting_dict[D] + sorting_dict[H]
 
-def checkCombo(played, hand, base_atk):
+def checkLegalMoves(played, hand, base_atk):
     if len(played) == 0:
         return True, hand
     if len(played) == 1:
@@ -282,7 +282,7 @@ class enemy():
         global hand1
         global player_attack
         global current_enemy
-        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
         if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards):
             return
 
@@ -291,7 +291,7 @@ class enemy():
         self.raised = False
         hand1.update_positions()
         if play_btn.cget("text") == "Attack":
-            combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+            combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
                 if ((isinstance(c, card) or isinstance(c, enemy))) and c.raised:
@@ -356,12 +356,12 @@ class enemy():
 
         safe_bind(self.canvas, self.character_id, "<Button-1>", self.on_click)
 
-        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
         for c in hand1.cards:
             if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
                 c.raised = False
 
-        if combo_flag:
+        if combo_flag and len(played_hand1.cards)>0:
             for c in combo_cards:
                 if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                     c.set_y(c.get_y() - 20)
@@ -477,13 +477,13 @@ class card():
         hand1.fill_hand(tavern1, 1)
         safe_bind(self.canvas, self.character_id, "<Button-1>", self.on_click)
 
-        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
 
         for c in hand1.cards:
             if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
                 c.raised = False
 
-        if combo_flag:
+        if combo_flag and len(played_hand1.cards)>0:
             for c in combo_cards:
                 if (isinstance(c, card) or isinstance(c, enemy)) and not c.raised:
                     c.set_y(c.get_y() - 20)
@@ -499,7 +499,7 @@ class card():
         global player_attack
         global current_enemy
         self.raised = False
-        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
         if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards)==4:
             return
 
@@ -508,7 +508,7 @@ class card():
         hand1.update_positions()
 
         if play_btn.cget("text") == "Attack":
-            combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+            combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
                 if (isinstance(c, card) or isinstance(c, enemy)) and c.raised:
