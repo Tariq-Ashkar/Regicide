@@ -229,6 +229,15 @@ def defend():
         show_frame(lose_menu)
         hand1.update_positions()
         return
+    else:
+        hand_ranks=[]
+        for c in hand1:
+            hand_ranks.append(c.rank)
+        possible_defense=sum(hand_ranks)
+        if possible_defense<incoming_damage:
+            show_frame(lose_menu)
+            hand1.update_positions()
+            return
     hand1.update_positions()
 
 def image_resize(file, width, height):
@@ -283,7 +292,7 @@ class enemy():
         global player_attack
         global current_enemy
         combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
-        if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards):
+        if (self not in combo_cards and play_btn.cget("text") == "Attack") or self not in hand1.cards or len(played_hand1.cards):
             return
 
         hand1.cards.remove(self)
@@ -500,7 +509,7 @@ class card():
         global current_enemy
         self.raised = False
         combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
-        if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards)==4:
+        if (self not in combo_cards and play_btn.cget("text") == "Attack") or self not in hand1.cards or len(played_hand1.cards)==4:
             return
 
         hand1.cards.remove(self)
