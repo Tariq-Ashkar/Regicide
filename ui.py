@@ -58,7 +58,8 @@ def sortHand(hand):
     return sorting_dict[S] + sorting_dict[C] + sorting_dict[D] + sorting_dict[H]
 
 def checkCombo(played, hand, base_atk):
-
+    if len(played) == 0:
+        return True, hand
     if len(played) == 1:
         if played[0].rank == 1:
             return True, hand
@@ -281,8 +282,8 @@ class enemy():
         global hand1
         global player_attack
         global current_enemy
-
-        if self not in hand1.cards:
+        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards):
             return
 
         hand1.cards.remove(self)
@@ -498,8 +499,8 @@ class card():
         global player_attack
         global current_enemy
         self.raised = False
-
-        if self not in hand1.cards:
+        combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
+        if self not in combo_cards or self not in hand1.cards or len(played_hand1.cards)==4:
             return
 
         hand1.cards.remove(self)
