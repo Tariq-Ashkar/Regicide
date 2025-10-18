@@ -288,7 +288,7 @@ class enemy():
         hand1.cards.remove(self)
         played_hand1.add_card(self)
         self.raised = False
-
+        hand1.update_positions()
         if play_btn.cget("text") == "Attack":
             combo_flag, combo_cards = checkCombo(played_hand1.cards, hand1.cards, base_atk)
 
@@ -320,7 +320,6 @@ class enemy():
         print(f"Base Attack: {base_atk}")
 
         safe_bind(self.canvas, self.character_id, "<Button-1>", self.return_to_hand)
-        hand1.update_positions()
 
     def set_x(self, new_x):
         self.x = new_x
