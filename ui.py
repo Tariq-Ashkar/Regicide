@@ -8,7 +8,7 @@ D = 'diamonds'
 H = 'hearts'
 SUITS = [S, C, D, H]
 base_atk = 0
-
+phase="Attack"
 # creating the initial window
 root = tk.Tk()
 root.geometry("1400x1000")
@@ -114,7 +114,7 @@ def reveal_next_enemy(canvas, castle, current_enemy):
 
     return next_enemy
 
-def attack():
+def attack(event):
     global discard
     global current_enemy
     global base_atk
@@ -124,7 +124,9 @@ def attack():
     global game_canvas
     global castle
     global enemy_attack
-
+    global phase
+    if(len(played_hand1.cards)==0):
+        return
     enemy_isAlive = True
     heart_flag = False
     diamond_flag = False
@@ -184,7 +186,8 @@ def attack():
     print(f"Hand {hand1.cards}, played {played_hand1.cards}")
 
     if enemy_isAlive and current_enemy.atk > 0:
-        play_btn.configure(text="Defend", command=lambda: defend())
+        safe_bind(game_canvas, play_btn, "<Button-1>", defend)
+        phase="Defend"
     player_attack.update_label(0)
 
     # Lower any raised cards unless diamonds just drew
@@ -198,7 +201,7 @@ def attack():
     hand1.update_positions()
 cumulative_blocked = 0
 
-def defend():
+def defend(event):
     print('defending')
     global discard
     global current_enemy
@@ -211,6 +214,9 @@ def defend():
     global enemy_attack
     global cumulative_blocked
     global jesters
+    global phase
+    if(len(played_hand1.cards)==0):
+        return
 
     incoming_damage = current_enemy.atk
     for _ in range(len(played_hand1.cards)):
@@ -219,7 +225,8 @@ def defend():
         discard.add_card(c)
 
     if cumulative_blocked >= incoming_damage:
-        play_btn.configure(text="Attack", command=lambda: attack())
+        safe_bind(game_canvas, play_btn, "<Button-1>", attack)
+        phase="Attack"
         player_attack.update_label(0)
         base_atk = 0
         cumulative_blocked = 0
@@ -292,14 +299,14 @@ class enemy():
         global player_attack
         global current_enemy
         combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
-        if (self not in combo_cards and play_btn.cget("text") == "Attack") or self not in hand1.cards or len(played_hand1.cards):
+        if (self not in combo_cards and phase == "Attack") or self not in hand1.cards or len(played_hand1.cards):
             return
 
         hand1.cards.remove(self)
         played_hand1.add_card(self)
         self.raised = False
         hand1.update_positions()
-        if play_btn.cget("text") == "Attack":
+        if phase == "Attack":
             combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
@@ -509,14 +516,14 @@ class card():
         global current_enemy
         self.raised = False
         combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
-        if (self not in combo_cards and play_btn.cget("text") == "Attack") or self not in hand1.cards or len(played_hand1.cards)==4:
+        if (self not in combo_cards and phase == "Attack") or self not in hand1.cards or len(played_hand1.cards)==4:
             return
 
         hand1.cards.remove(self)
         played_hand1.add_card(self)
         hand1.update_positions()
 
-        if play_btn.cget("text") == "Attack":
+        if phase == "Attack":
             combo_flag, combo_cards = checkLegalMoves(played_hand1.cards, hand1.cards, base_atk)
 
             for c in hand1.cards:
@@ -539,7 +546,7 @@ class card():
         base_atk = base_atk + self.rank
 
         displayed_attack = base_atk
-        if play_btn.cget("text") == "Attack":
+        if phase == "Attack":
             for c in played_hand1.cards:
                 if c.suit == C and not current_enemy.suit == C:
                     displayed_attack = base_atk * 2
@@ -848,12 +855,6 @@ back_to_menu_btn = tk.Button(pause_menu,
                              command=lambda: show_frame(main_menu))
 back_to_menu_btn.place(x=600, y=200, height=50, width=200)
 
-start_btn = tk.Button(pause_menu,
-                      text="play Game",
-                      font=("Arial", 14, "bold"),
-                      command=lambda: show_frame(game_screen))
-start_btn.place(x=600, y=300, height=75, width=200)
-
 win_canvas = tk.Canvas(win_menu,
                        width=FRAME_WIDTH,
                        height=FRAME_HEIGHT,
@@ -863,12 +864,6 @@ win_canvas.pack()
 win_canvas.create_image(0, 0, anchor="nw", image=bg_image)
 win_img = image_resize('win.png', 400, 200)
 win_title = win_canvas.create_image(500, 50, anchor="nw", image=win_img)
-
-back_to_menu_btn = tk.Button(win_menu,
-                             text="Back to Main Menu",
-                             font=("Arial", 14),
-                             command=lambda: show_frame(main_menu))
-back_to_menu_btn.place(x=600, y=200, height=50, width=200)
 
 lose_canvas = tk.Canvas(lose_menu,
                         width=FRAME_WIDTH,
@@ -944,20 +939,20 @@ def discard_random(event=None):
         card_obj = played_hand1.cards.pop(0)
         discard.add_card(card_obj)
 
-clear_btn = tk.Button(game_screen, text="clear", command=discard_random)
-clear_btn.place(x=960, y=615)
 
-discard_btn = tk.Button(game_screen, text="discard", command=discard_random)
-discard_btn.place(x=960, y=615)
-
-lose_btn = tk.Button(game_screen, text="lose", command=lambda: show_frame(lose_menu))
-lose_btn.place(x=960, y=575)
-
-pause_btn = tk.Button(game_screen, text="pause", command=lambda: show_frame(pause_menu))
-pause_btn.place(x=960, y=535)
-
-play_btn = tk.Button(game_screen, text="Attack", command=lambda: attack())
-play_btn.place(x=960, y=495)
+play_btn_img=image_resize('play button.png', 260, 150)
+play_btn_img_white=image_resize('white play button.png', 260, 150)
+play_btn=game_canvas.create_image(
+            910,
+            490,
+            image=play_btn_img,
+            anchor="nw"
+        )
+safe_bind(game_canvas, play_btn, "<Button-1>", attack)
+game_canvas.tag_bind(play_btn, "<Enter>", func=lambda e: game_canvas.itemconfig(play_btn,
+        image=play_btn_img_white))
+game_canvas.tag_bind(play_btn, "<Leave>", func=lambda e: game_canvas.itemconfig(play_btn,
+        image=play_btn_img))
 
 # Key bindings for highlight/unhighlight (1..8)
 root.bind("<KeyPress-1>", lambda e: hand1.highlight_card(1))
