@@ -8,6 +8,7 @@ D = 'diamonds'
 H = 'hearts'
 SUITS = [S, C, D, H]
 base_atk = 0
+game_lost = False
 phase="Attack"
 # creating the initial window
 root = tk.Tk()
@@ -886,60 +887,76 @@ game_canvas = tk.Canvas(game_screen, width=FRAME_WIDTH, height=FRAME_HEIGHT, bg=
 game_canvas.pack()
 game_canvas.create_image(0, 0, anchor="nw", image=bg_image)
 
-# Initialising deck
-deck = []
-for suit in SUITS:
-    for r in range(1, 11):
-        deck.append(card(game_canvas, r, suit, 105, 144, -200, -200))
+tavern1=None
+hand1=None
+castle=[]
+current_enemy=None
+played_hand1=None
+discard=None
+jokerwid=None
+enemy_attack=None
+player_attack=None
 
-random.shuffle(deck)
-tavern1 = tavern(game_canvas, deck, 69, 695, 102, 144)
-
-# Initialising Hand
-hand1 = hand(game_canvas, 220, 680, 965, 178)
-hand1.fill_hand(tavern1)
-
-# Initialising Castle and current_enemy
-castle = []
-for rank in range(20, 5, -5):
+def initialise_game():
+    global base_atk
+    global game_lost
+    global tavern1
+    global hand1
+    global current_enemy
+    global castle
+    global played_hand1
+    global discard
+    global jokerwid
+    global enemy_attack
+    global player_attack
+    # function can be used at start of games or as a restart
+    base_atk=0
+    game_lost=False
+    # Initialising deck
+    deck = []
     for suit in SUITS:
-        castle.append(enemy(game_canvas, rank, -400, -400, suit, 204, 288))
+        for r in range(1, 11):
+            deck.append(card(game_canvas, r, suit, 105, 144, -200, -200))
 
-kings = castle[:4]
-queens = castle[4:8]
-jacks = castle[8:12]
+    random.shuffle(deck)
+    tavern1 = tavern(game_canvas, deck, 69, 695, 102, 144)
 
-random.shuffle(kings)
-random.shuffle(queens)
-random.shuffle(jacks)
+    # Initialising Hand
+    hand1 = hand(game_canvas, 220, 680, 965, 178)
+    hand1.fill_hand(tavern1)
 
-castle.clear()
-castle = kings + queens + jacks
+    # Initialising Castle and current_enemy
+    castle = []
+    for rank in range(20, 5, -5):
+        for suit in SUITS:
+            castle.append(enemy(game_canvas, rank, -400, -400, suit, 204, 288))
 
-current_enemy = reveal_next_enemy(game_canvas, castle, None)
-current_enemy.update_health_bar()
+    kings = castle[:4]
+    queens = castle[4:8]
+    jacks = castle[8:12]
 
-# Initialising Misc
-played_hand1 = played_hand(game_canvas, 452, 475, 500, 184)
-discard = discard_pile(game_canvas, 1300, 800, 105, 154)  # x,y is center
+    random.shuffle(kings)
+    random.shuffle(queens)
+    random.shuffle(jacks)
 
-jokerwid = JokerWidget(game_canvas, 1160, 20, 220, 154)
-jokerwid.fill_jokers()
+    castle.clear()
+    castle = kings + queens + jacks
 
-enemy_attack = AttackLabel(game_canvas, 650, 340, 100, 30)
-enemy_attack.update_label(current_enemy.atk)
+    current_enemy = reveal_next_enemy(game_canvas, castle, None)
+    current_enemy.update_health_bar()
 
-player_attack = AttackLabel(game_canvas, 650, 405, 100, 30)
-player_attack.update_label(0)
+    # Initialising Misc
+    played_hand1 = played_hand(game_canvas, 452, 475, 500, 184)
+    discard = discard_pile(game_canvas, 1300, 800, 105, 154)  # x,y is center
 
-base_atk = 0
-game_lost = False
+    jokerwid = JokerWidget(game_canvas, 1160, 20, 220, 154)
+    jokerwid.fill_jokers()
 
-def discard_random(event=None):
-    while played_hand1.cards:
-        card_obj = played_hand1.cards.pop(0)
-        discard.add_card(card_obj)
+    enemy_attack = AttackLabel(game_canvas, 650, 340, 100, 30)
+    enemy_attack.update_label(current_enemy.atk)
 
+    player_attack = AttackLabel(game_canvas, 650, 405, 100, 30)
+    player_attack.update_label(0)
 
 play_btn_img=image_resize('play button.png', 260, 150)
 play_btn_img_white=image_resize('white play button.png', 260, 150)
@@ -954,31 +971,6 @@ game_canvas.tag_bind(play_btn, "<Enter>", func=lambda e: game_canvas.itemconfig(
         image=play_btn_img_white))
 game_canvas.tag_bind(play_btn, "<Leave>", func=lambda e: game_canvas.itemconfig(play_btn,
         image=play_btn_img))
-
-# Key bindings for highlight/unhighlight (1..8)
-root.bind("<KeyPress-1>", lambda e: hand1.highlight_card(1))
-root.bind("<KeyRelease-1>", lambda e: hand1.unhighlight_card(1))
-
-root.bind("<KeyPress-2>", lambda e: hand1.highlight_card(2))
-root.bind("<KeyRelease-2>", lambda e: hand1.unhighlight_card(2))
-
-root.bind("<KeyPress-3>", lambda e: hand1.highlight_card(3))
-root.bind("<KeyRelease-3>", lambda e: hand1.unhighlight_card(3))
-
-root.bind("<KeyPress-4>", lambda e: hand1.highlight_card(4))
-root.bind("<KeyRelease-4>", lambda e: hand1.unhighlight_card(4))
-
-root.bind("<KeyPress-5>", lambda e: hand1.highlight_card(5))
-root.bind("<KeyRelease-5>", lambda e: hand1.unhighlight_card(5))
-
-root.bind("<KeyPress-6>", lambda e: hand1.highlight_card(6))
-root.bind("<KeyRelease-6>", lambda e: hand1.unhighlight_card(6))
-
-root.bind("<KeyPress-7>", lambda e: hand1.highlight_card(7))
-root.bind("<KeyRelease-7>", lambda e: hand1.unhighlight_card(7))
-
-root.bind("<KeyPress-8>", lambda e: hand1.highlight_card(8))
-root.bind("<KeyRelease-8>", lambda e: hand1.unhighlight_card(8))
 
 show_frame(main_menu)
 root.mainloop()
