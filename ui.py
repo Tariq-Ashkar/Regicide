@@ -761,6 +761,7 @@ class Joker():
 
     def on_click(self, event):
         play_jester(self)
+        safe_unbind(self.canvas, self.character_id, "<Button-1>")
 
 class discard_pile():
     def __init__(self, canvas, x, y, width, height):
